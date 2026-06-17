@@ -62,6 +62,14 @@ def new_meeting():
     return redirect(url_for('attend', meeting_id=meeting_id))
 
 
+# ── 모임 삭제 ─────────────────────────────────────────────
+@app.route('/meeting/<meeting_id>/delete', methods=['POST'])
+@login_required
+def delete_meeting(meeting_id):
+    db.delete_meeting(meeting_id)
+    return redirect(url_for('dashboard'))
+
+
 # ── 출결 체크 페이지 (부원용 QR 접속) ────────────────────
 @app.route('/attend/<meeting_id>')
 def attend(meeting_id):

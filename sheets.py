@@ -128,6 +128,21 @@ class SheetsDB:
         except gspread.exceptions.WorksheetNotFound:
             return []
 
+    def delete_meeting(self, meeting_id: str):
+        ws = self._ws(config.SHEET_MEETINGS)
+        rows = ws.get_all_values()
+        for i, row in enumerate(rows[1:], start=2):
+            if str(row[0]) == str(meeting_id):
+                meeting_name = row[2]
+                date_str = row[1]
+                existing = {s.title: s for s in self.ss.worksheets()}
+                for candidate in [meeting_name, f"{meeting_name}_{date_str}"]:
+                    if candidate in existing:
+                        self.ss.del_worksheet(existing[candidate])
+                        break
+                ws.delete_rows(i)
+                return
+
     def get_all_attendance(self) -> list:
         meetings = self.get_meetings()
         existing_sheets = {s.title for s in self.ss.worksheets()}
