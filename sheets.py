@@ -31,7 +31,7 @@ class SheetsDB:
         existing = {s.title for s in self.ss.worksheets()}
 
         if config.SHEET_MEMBERS not in existing:
-            ws = self.ss.add_worksheet(config.SHEET_MEMBERS, rows=200, cols=5)
+            ws = self.ss.add_worksheet(config.SHEET_MEMBERS, rows=200, cols=3)
             ws.append_row(['이름', '전화번호 뒤 4자리'])
         else:
             ws = self._ws(config.SHEET_MEMBERS)
@@ -40,16 +40,12 @@ class SheetsDB:
                 ws.update_cell(1, len(headers) + 1, '전화번호 뒤 4자리')
 
         if config.SHEET_MEETINGS not in existing:
-            ws = self.ss.add_worksheet(config.SHEET_MEETINGS, rows=200, cols=5)
+            ws = self.ss.add_worksheet(config.SHEET_MEETINGS, rows=200, cols=4)
             ws.append_row(['모임ID', '날짜', '모임명', '시작시간'])
         else:
             ws = self._ws(config.SHEET_MEETINGS)
             if '시작시간' not in ws.row_values(1):
                 ws.update_cell(1, len(ws.row_values(1)) + 1, '시작시간')
-
-        if config.SHEET_ATTENDANCE not in existing:
-            ws = self.ss.add_worksheet(config.SHEET_ATTENDANCE, rows=2000, cols=6)
-            ws.append_row(['모임ID', '날짜', '이름', '상태', '체크시간'])
 
     # ── 부원 ──────────────────────────────────────────────
     def get_members(self) -> list:
@@ -59,6 +55,19 @@ class SheetsDB:
     def create_meeting(self, name: str, date_str: str, start_time: str = '') -> str:
         meeting_id = datetime.now().strftime('%Y%m%d%H%M%S')
         self._ws(config.SHEET_MEETINGS).append_row([meeting_id, date_str, name, start_time])
+
+        # 모임명으로 출결 시트 생성
+        existing = {s.title for s in self.ss.worksheets()}
+        sheet_name = name if name not in existing else f"{name}_{date_str}"
+        ws = self.ss.add_worksheet(sheet_name, rows=200, cols=4)
+        ws.append_row(['이름', '전화번호 뒤 4자리', '상태', '체크시간'])
+
+        # 전체 부원 미체크로 선 입력
+        members = self.get_members()
+        if members:
+            rows = [[m['이름'], str(m.get('전화번호 뒤 4자리', '') or ''), '미체크', ''] for m in members]
+            ws.append_rows(rows)
+
         return meeting_id
 
     def get_meetings(self) -> list:
@@ -68,20 +77,75 @@ class SheetsDB:
         meetings = self.get_meetings()
         return next((m for m in meetings if str(m['모임ID']) == str(meeting_id)), None)
 
+    def _meeting_sheet_name(self, meeting: dict) -> str | None:
+        """모임 dict에서 실제 시트명 찾기 (모임명 또는 모임명_날짜)"""
+        name = meeting['모임명']
+        date_str = meeting['날짜']
+        existing = {s.title for s in self.ss.worksheets()}
+        if name in existing:
+            return name
+        fallback = f"{name}_{date_str}"
+        if fallback in existing:
+            return fallback
+        return None
+
     # ── 출결 ──────────────────────────────────────────────
     def set_attendance(self, meeting_id: str, date_str: str, member_name: str, status: str):
-        ws = self._ws(config.SHEET_ATTENDANCE)
+        meeting = self.get_meeting(meeting_id)
+        if not meeting:
+            return
+        sheet_name = self._meeting_sheet_name(meeting)
+        if not sheet_name:
+            return
+
+        ws = self._ws(sheet_name)
         rows = ws.get_all_values()
         now = datetime.now().strftime('%H:%M:%S')
+
         for i, row in enumerate(rows[1:], start=2):
-            if str(row[0]) == str(meeting_id) and row[2] == member_name:
-                ws.update(f'D{i}:E{i}', [[status, now]])
+            if row[0] == member_name:
+                if status == '미체크':
+                    ws.update(f'C{i}:D{i}', [['미체크', '']])
+                else:
+                    ws.update(f'C{i}:D{i}', [[status, now]])
                 return
-        ws.append_row([meeting_id, date_str, member_name, status, now])
+
+        # 시트에 없으면 새 행 추가 (이전 모임 구조 호환)
+        ws.append_row([member_name, '', status, now if status != '미체크' else ''])
 
     def get_attendance_for_meeting(self, meeting_id: str) -> list:
-        records = self._ws(config.SHEET_ATTENDANCE).get_all_records()
-        return [r for r in records if str(r['모임ID']) == str(meeting_id)]
+        meeting = self.get_meeting(meeting_id)
+        if not meeting:
+            return []
+        sheet_name = self._meeting_sheet_name(meeting)
+        if not sheet_name:
+            return []
+        try:
+            records = self._ws(sheet_name).get_all_records()
+            for r in records:
+                r['모임ID'] = meeting_id
+            return records
+        except gspread.exceptions.WorksheetNotFound:
+            return []
 
     def get_all_attendance(self) -> list:
-        return self._ws(config.SHEET_ATTENDANCE).get_all_records()
+        meetings = self.get_meetings()
+        existing_sheets = {s.title for s in self.ss.worksheets()}
+        all_records = []
+        for m in meetings:
+            name = m['모임명']
+            date_str = m['날짜']
+            if name in existing_sheets:
+                sheet_name = name
+            elif f"{name}_{date_str}" in existing_sheets:
+                sheet_name = f"{name}_{date_str}"
+            else:
+                continue
+            try:
+                records = self._ws(sheet_name).get_all_records()
+                for r in records:
+                    r['모임ID'] = m['모임ID']
+                all_records.extend(records)
+            except Exception:
+                pass
+        return all_records
