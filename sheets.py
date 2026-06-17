@@ -4,6 +4,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 import config
+from attendance import calc_fine, calc_minutes_late
 
 SCOPES = [
     'https://spreadsheets.google.com/feeds',
@@ -59,13 +60,13 @@ class SheetsDB:
         # 모임명으로 출결 시트 생성
         existing = {s.title for s in self.ss.worksheets()}
         sheet_name = name if name not in existing else f"{name}_{date_str}"
-        ws = self.ss.add_worksheet(sheet_name, rows=200, cols=4)
-        ws.append_row(['이름', '전화번호 뒤 4자리', '상태', '체크시간'])
+        ws = self.ss.add_worksheet(sheet_name, rows=200, cols=5)
+        ws.append_row(['이름', '전화번호 뒤 4자리', '상태', '체크시간', '벌금'])
 
         # 전체 부원 미체크로 선 입력
         members = self.get_members()
         if members:
-            rows = [[m['이름'], str(m.get('전화번호 뒤 4자리', '') or ''), '미체크', ''] for m in members]
+            rows = [[m['이름'], str(m.get('전화번호 뒤 4자리', '') or ''), '미체크', '', ''] for m in members]
             ws.append_rows(rows)
 
         return meeting_id
@@ -101,17 +102,23 @@ class SheetsDB:
         ws = self._ws(sheet_name)
         rows = ws.get_all_values()
         now = datetime.now().strftime('%H:%M:%S')
+        start_time = meeting.get('시작시간', '')
+        mins = calc_minutes_late(start_time, now)
+        fine = calc_fine(mins) if status == '지각' else 0
 
         for i, row in enumerate(rows[1:], start=2):
             if row[0] == member_name:
                 if status == '미체크':
-                    ws.update(f'C{i}:D{i}', [['미체크', '']])
+                    ws.update(f'C{i}:E{i}', [['미체크', '', '']])
                 else:
-                    ws.update(f'C{i}:D{i}', [[status, now]])
+                    ws.update(f'C{i}:E{i}', [[status, now, fine if fine > 0 else '']])
                 return
 
         # 시트에 없으면 새 행 추가 (이전 모임 구조 호환)
-        ws.append_row([member_name, '', status, now if status != '미체크' else ''])
+        if status == '미체크':
+            ws.append_row([member_name, '', '미체크', '', ''])
+        else:
+            ws.append_row([member_name, '', status, now, fine if fine > 0 else ''])
 
     def get_attendance_for_meeting(self, meeting_id: str) -> list:
         meeting = self.get_meeting(meeting_id)

@@ -13,9 +13,8 @@ STATUS_UNCHECKED = '미체크'
 TOGGLE_CYCLE = [STATUS_UNCHECKED, STATUS_PRESENT, STATUS_LATE, STATUS_ABSENT]
 
 # ── 규칙 설정 ─────────────────────────────────────────────
-LATE_PER_ABSENT = 2          # 지각 N회 = 결석 1회
-WARNING_THRESHOLD = 3        # 실질 결석 N회 이상 → 경고
-EXPEL_THRESHOLD = 5          # 실질 결석 N회 이상 → 제명 대상
+WARNING_THRESHOLD = 3        # 결석 N회 이상 → 경고
+EXPEL_THRESHOLD = 5          # 결석 N회 이상 → 제명 대상
 
 FINE_BASE = 2000             # 지각 기본 벌금 (원)
 FINE_PER_10MIN = 1000        # 이후 10분당 추가 벌금 (원)
@@ -48,11 +47,8 @@ class AttendanceEngine:
         idx = TOGGLE_CYCLE.index(current) if current in TOGGLE_CYCLE else 0
         return TOGGLE_CYCLE[(idx + 1) % len(TOGGLE_CYCLE)]
 
-    def effective_absences(self, records: list) -> float:
-        """지각 포함한 실질 결석 횟수"""
-        absent = sum(1 for r in records if r['상태'] == STATUS_ABSENT)
-        late = sum(1 for r in records if r['상태'] == STATUS_LATE)
-        return absent + (late // LATE_PER_ABSENT)
+    def effective_absences(self, records: list) -> int:
+        return sum(1 for r in records if r['상태'] == STATUS_ABSENT)
 
     def member_summary(self, name: str, all_records: list, meetings_map: dict) -> dict:
         records = [r for r in all_records if r['이름'] == name]
