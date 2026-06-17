@@ -32,7 +32,7 @@ class SheetsDB:
 
         if config.SHEET_MEMBERS not in existing:
             ws = self.ss.add_worksheet(config.SHEET_MEMBERS, rows=200, cols=5)
-            ws.append_row(['이름', '학번', '전화번호 뒤 4자리'])
+            ws.append_row(['이름', '전화번호 뒤 4자리'])
         else:
             ws = self._ws(config.SHEET_MEMBERS)
             headers = ws.row_values(1)
