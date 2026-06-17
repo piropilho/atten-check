@@ -107,7 +107,11 @@ async function confirmCancel() {
 // ── 결과 화면 표시 ─────────────────────────────────────
 function showResult(name, status, checkTime, fine) {
   const isLate = status === '지각';
-  document.getElementById('resultIcon').textContent   = isLate ? '⚠️' : '✅';
+  const wrap = document.getElementById('screenResult').querySelector('.result-wrap');
+  wrap.classList.remove('result-present', 'result-late');
+  wrap.classList.add(isLate ? 'result-late' : 'result-present');
+
+  document.getElementById('resultIcon').textContent   = isLate ? '⏰' : '✅';
   document.getElementById('resultStatus').textContent = isLate ? '지각' : '출석 완료';
   document.getElementById('resultName').textContent   = name;
   document.getElementById('resultTime').textContent   = checkTime;
