@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 — 동아리 출결관리</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="login-body">
+  <div class="login-box">
+    <h1 class="login-title">동아리 출결관리</h1>
+    <p class="login-sub">관리자 로그인</p>
+    {% if error %}
+      <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+    <form method="POST" action="/login">
+      <div class="form-group">
+        <label for="password">비밀번호</label>
+        <input type="password" id="password" name="password"
+               placeholder="비밀번호 입력" autofocus required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">로그인</button>
+    </form>
+  </div>
+</body>
+</html>

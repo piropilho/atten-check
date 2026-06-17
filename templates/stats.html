@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}출결 통계{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>출결 통계</h2>
+  <span class="page-sub">전체 모임 수: {{ total_meetings }}회</span>
+</div>
+
+<div class="table-wrap">
+  <table class="stats-table">
+    <thead>
+      <tr>
+        <th>이름</th>
+        <th>출석</th>
+        <th>지각</th>
+        <th>결석</th>
+        <th>실질 결석</th>
+        <th>벌금</th>
+        <th>상태</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in summaries %}
+      <tr class="{% if s['expel_risk'] %}row-danger{% elif s['warning'] %}row-warning{% endif %}">
+        <td class="td-name">{{ s['name'] }}</td>
+        <td class="td-center text-present">{{ s['present'] }}</td>
+        <td class="td-center text-late">{{ s['late'] }}</td>
+        <td class="td-center text-absent">{{ s['absent'] }}</td>
+        <td class="td-center">{{ s['effective_absent'] }}</td>
+        <td class="td-center td-fine">
+          {% if s['total_fine'] > 0 %}{{ '{:,}'.format(s['total_fine']) }}원{% else %}—{% endif %}
+        </td>
+        <td class="td-center">
+          {% if s['expel_risk'] %}
+            <span class="badge badge-danger">제명 위험</span>
+          {% elif s['warning'] %}
+            <span class="badge badge-warning">경고</span>
+          {% else %}
+            <span class="badge badge-ok">정상</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

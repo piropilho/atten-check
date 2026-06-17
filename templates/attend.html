@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>출결 체크 — {{ meeting['모임명'] }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="attend-body">
+
+  <header class="attend-header">
+    <div class="attend-title">{{ meeting['모임명'] }}</div>
+    <div class="attend-meta">
+      {{ meeting['날짜'] }}{% if start_time %}&nbsp;·&nbsp;집합 {{ start_time }}{% endif %}
+    </div>
+  </header>
+
+  <!-- 검색 + 목록 화면 -->
+  <div id="screenSearch" class="attend-screen">
+    <div class="search-wrap">
+      <input id="searchInput" type="text" placeholder="이름으로 검색..." autocomplete="off" spellcheck="false">
+    </div>
+    <ul id="memberList" class="member-list">
+      {% for m in members %}
+      <li class="member-row"
+          data-name="{{ m['name'] }}"
+          data-phone="{{ m['phone4'] }}"
+          data-status="{{ m['status'] }}">
+        <div class="member-row-left">
+          <span class="member-row-name">{{ m['name'] }}</span>
+          {% if m['phone4'] %}<span class="member-row-phone">···{{ m['phone4'] }}</span>{% endif %}
+        </div>
+        {% if m['status'] != '미체크' %}
+        <span class="mrow-badge mrow-badge-{{ m['status'] }}">{{ m['status'] }}</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <!-- 확인 모달 (하단 시트) -->
+  <div id="modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-body">
+        <div id="modalName" class="modal-name"></div>
+        <div id="modalPhone" class="modal-phone"></div>
+        <div id="modalMsg" class="modal-msg"></div>
+      </div>
+      <div id="modalButtons" class="modal-buttons"></div>
+    </div>
+  </div>
+
+  <!-- 결과 화면 -->
+  <div id="screenResult" class="attend-screen hidden">
+    <div class="result-wrap">
+      <div id="resultIcon" class="result-icon"></div>
+      <div id="resultStatus" class="result-status"></div>
+      <div id="resultName" class="result-name"></div>
+      <div id="resultTime" class="result-time"></div>
+      <div id="resultFine" class="result-fine hidden"></div>
+      <button class="btn btn-outline btn-block result-undo" onclick="undoAttend()">다시 선택하기</button>
+    </div>
+  </div>
+
+  <script>
+    const MEETING_ID = {{ meeting_id | tojson }};
+    const START_TIME = {{ start_time | tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='attend.js') }}"></script>
+</body>
+</html>

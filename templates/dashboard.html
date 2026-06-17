@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}모임 목록{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>모임 목록</h2>
+</div>
+
+<div class="card">
+  <h3 class="card-title">새 모임 만들기</h3>
+  <form method="POST" action="/meeting/new" class="inline-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label>날짜</label>
+        <input type="date" name="date" value="{{ today }}" required>
+      </div>
+      <div class="form-group">
+        <label>시작 시간</label>
+        <input type="time" name="start_time" value="18:00" required>
+      </div>
+      <div class="form-group flex-grow">
+        <label>모임명</label>
+        <input type="text" name="name" placeholder="예: 정기모임, 특강, 엠티" required>
+      </div>
+      <div class="form-group align-bottom">
+        <button type="submit" class="btn btn-primary">모임 생성 →</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="meeting-list">
+  {% if meetings %}
+    {% for m in meetings %}
+    <div class="meeting-item">
+      <div class="meeting-info">
+        <span class="meeting-date">{{ m['날짜'] }}{% if m['시작시간'] %} · {{ m['시작시간'] }}{% endif %}</span>
+        <span class="meeting-name">{{ m['모임명'] }}</span>
+      </div>
+      <div class="meeting-actions">
+        <button class="btn btn-outline"
+                onclick="showQR('{{ m['모임ID'] }}', '{{ m['모임명'] }}')">QR</button>
+        <a href="/attend/{{ m['모임ID'] }}" class="btn btn-outline">출결 체크</a>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <p>아직 모임이 없습니다. 위에서 새 모임을 만드세요.</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- QR 모달 -->
+<div id="qrModal" class="qr-modal-overlay hidden">
+  <div class="qr-modal-box">
+    <div id="qrMeetingName" class="qr-title"></div>
+    <div id="qrcode"></div>
+    <div id="qrUrl" class="qr-url"></div>
+    <div class="qr-buttons">
+      <button class="btn btn-outline" onclick="closeQR()">닫기</button>
+      <button class="btn btn-primary" onclick="printQR()">인쇄</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  let qrInstance = null;
+
+  function showQR(meetingId, meetingName) {
+    const url = window.location.origin + '/attend/' + meetingId;
+    document.getElementById('qrMeetingName').textContent = meetingName;
+    document.getElementById('qrUrl').textContent = url;
+
+    const container = document.getElementById('qrcode');
+    container.innerHTML = '';
+
+    qrInstance = new QRCode(container, {
+      text: url,
+      width: 220,
+      height: 220,
+      colorDark: '#1e293b',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+
+    document.getElementById('qrModal').classList.remove('hidden');
+  }
+
+  function closeQR() {
+    document.getElementById('qrModal').classList.add('hidden');
+  }
+
+  function printQR() {
+    const name = document.getElementById('qrMeetingName').textContent;
+    const url  = document.getElementById('qrUrl').textContent;
+    const img  = document.querySelector('#qrcode img');
+    if (!img) return;
+
+    const win = window.open('', '_blank');
+    win.document.write(`
+      <html><head><title>QR — ${name}</title>
+      <style>
+        body { font-family: sans-serif; text-align: center; padding: 40px; }
+        img  { display: block; margin: 20px auto; }
+        p    { color: #64748b; font-size: 14px; word-break: break-all; }
+      </style></head>
+      <body>
+        <h2>${name}</h2>
+        <img src="${img.src}">
+        <p>${url}</p>
+      </body></html>
+    `);
+    win.document.close();
+    win.print();
+  }
+
+  document.getElementById('qrModal').addEventListener('click', function(e) {
+    if (e.target === this) closeQR();
+  });
+</script>
+{% endblock %}
