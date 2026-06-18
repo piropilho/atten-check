@@ -3,8 +3,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin1234')
-SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-change-in-prod')
+ADMIN_PASSWORD = os.environ['ADMIN_PASSWORD']
+SECRET_KEY = os.environ['SECRET_KEY']
 GOOGLE_CREDENTIALS_FILE = os.getenv('GOOGLE_CREDENTIALS_FILE', 'credentials.json')
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 
